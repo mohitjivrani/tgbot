@@ -35,6 +35,7 @@ services:
 
   scraper-service:
     build: ./scraper-service
+    restart: unless-stopped
     environment:
       - SCRAPER_TIMEOUT=30
 
@@ -43,8 +44,9 @@ services:
 
   scheduler-service:
     build: ./scheduler-service
+    restart: unless-stopped
     environment:
-      - CHECK_INTERVAL_MINUTES=30
+      - CHECK_INTERVAL_SECONDS=0
       - API_GATEWAY_URL=http://api-gateway:7500
       - SCRAPER_SERVICE_URL=http://scraper-service:7501
       - OFFER_ENGINE_URL=http://offer-engine:7502

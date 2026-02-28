@@ -24,7 +24,7 @@ class BaseScraper(ABC):
         self.session.headers.update(HEADERS)
 
     @abstractmethod
-    def scrape(self, url: str) -> dict:
+    def scrape(self, url: str, pincode: str | None = None) -> dict:
         """Scrape the given URL and return structured product data."""
 
     def _get_with_retry(self, url: str, max_retries: int = 3) -> requests.Response:

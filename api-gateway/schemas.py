@@ -6,6 +6,7 @@ from datetime import datetime
 class TrackRequest(BaseModel):
     url: str
     telegram_user_id: str
+    pincode: Optional[str] = None
 
 
 class BankOfferSchema(BaseModel):
@@ -25,8 +26,12 @@ class ProductResponse(BaseModel):
     product_url: str
     platform: str
     product_name: Optional[str] = None
+    preferred_pincode: Optional[str] = None
     last_price: Optional[int] = None
     last_availability: Optional[bool] = None
+    last_deliverable: Optional[bool] = None
+    last_available_at: Optional[datetime] = None
+    last_available_price: Optional[int] = None
     last_offer_hash: Optional[str] = None
     last_checked_at: Optional[datetime] = None
     bank_offers: List[BankOfferSchema] = []
@@ -37,8 +42,12 @@ class ProductResponse(BaseModel):
 
 class ProductUpdate(BaseModel):
     product_name: Optional[str] = None
+    preferred_pincode: Optional[str] = None
     last_price: Optional[int] = None
     last_availability: Optional[bool] = None
+    last_deliverable: Optional[bool] = None
+    last_available_at: Optional[datetime] = None
+    last_available_price: Optional[int] = None
     last_offer_hash: Optional[str] = None
     bank_offers: Optional[List[dict]] = None
 

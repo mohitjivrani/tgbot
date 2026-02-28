@@ -29,6 +29,7 @@ _scrapers = {
 class ScrapeRequest(BaseModel):
     url: str
     platform: str
+    pincode: str | None = None
 
 
 @app.get("/health")
@@ -44,5 +45,5 @@ def scrape(payload: ScrapeRequest):
         raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
 
     logger.info("Scraping %s url=%s", platform, payload.url)
-    result = scraper.scrape(payload.url)
+    result = scraper.scrape(payload.url, pincode=payload.pincode)
     return result

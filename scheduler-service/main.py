@@ -3,9 +3,9 @@ import json
 import logging
 import os
 import time
+from datetime import datetime
 
 import httpx
-from apscheduler.schedulers.blocking import BlockingScheduler
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,7 +16,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-CHECK_INTERVAL_MINUTES = int(os.getenv("CHECK_INTERVAL_MINUTES", "30"))
+CHECK_INTERVAL_MINUTES = int(os.getenv("CHECK_INTERVAL_MINUTES", "5"))
+CHECK_INTERVAL_SECONDS = int(
+    os.getenv("CHECK_INTERVAL_SECONDS", str(CHECK_INTERVAL_MINUTES * 60))
+)
 API_GATEWAY_URL = os.getenv("API_GATEWAY_URL", "http://api-gateway:7500")
 SCRAPER_URL = os.getenv("SCRAPER_SERVICE_URL", "http://scraper-service:7501")
 OFFER_ENGINE_URL = os.getenv("OFFER_ENGINE_URL", "http://offer-engine:7502")
@@ -75,6 +78,7 @@ def check_products():
         platform = product.get("platform")
         previous_hash = product.get("last_offer_hash")
         user_id = product.get("user_id")
+        preferred_pincode = product.get("preferred_pincode")
 
         logger.info("Checking product id=%s url=%s", product_id, url)
 
@@ -82,7 +86,7 @@ def check_products():
         try:
             scrape_resp = http_post_with_retry(
                 f"{SCRAPER_URL}/scrape",
-                {"url": url, "platform": platform},
+                {"url": url, "platform": platform, "pincode": preferred_pincode},
             )
             scrape_data = scrape_resp.json()
         except Exception as exc:
@@ -93,6 +97,7 @@ def check_products():
         new_price = scrape_data.get("price")
         new_name = scrape_data.get("product_name")
         new_availability = scrape_data.get("availability")
+        new_deliverable = scrape_data.get("deliverable")
 
         # Step 2: Analyze offers
         try:
@@ -124,6 +129,10 @@ def check_products():
             new_availability is not None
             and new_availability != product.get("last_availability")
         )
+        deliverability_changed = (
+            new_deliverable is not None
+            and new_deliverable != product.get("last_deliverable")
+        )
 
         patch_payload = {
             "last_offer_hash": new_hash,
@@ -135,6 +144,12 @@ def check_products():
             patch_payload["last_price"] = new_price
         if new_availability is not None:
             patch_payload["last_availability"] = new_availability
+        if new_deliverable is not None:
+            patch_payload["last_deliverable"] = new_deliverable
+        if new_availability is True:
+            patch_payload["last_available_at"] = datetime.utcnow().isoformat()
+            if new_price is not None:
+                patch_payload["last_available_price"] = new_price
 
         try:
             with httpx.Client(timeout=HTTP_TIMEOUT) as client:
@@ -143,19 +158,28 @@ def check_products():
             logger.error("Failed to update product id=%s: %s", product_id, exc)
 
         # Step 4: Notify user if something changed
-        if not (changed or price_changed or availability_changed):
+        if not (changed or price_changed or availability_changed or deliverability_changed):
             continue
 
         # Build notification message
         parts = [f"🔔 Update for product: {new_name or url}"]
         if price_changed:
             old_price = product.get("last_price")
-            parts.append(f"💰 Price: ₹{old_price} → ₹{new_price}")
+            old_price_str = f"₹{old_price}" if old_price is not None else "N/A"
+            parts.append(f"💰 Price: {old_price_str} → ₹{new_price}")
         if availability_changed:
             status = "✅ In Stock" if new_availability else "❌ Out of Stock"
             parts.append(f"📦 Availability: {status}")
+        if deliverability_changed:
+            if preferred_pincode:
+                status = "✅ Deliverable" if new_deliverable else "❌ Not deliverable"
+                parts.append(f"🚚 Deliverability ({preferred_pincode}): {status}")
+            else:
+                status = "✅ Deliverable" if new_deliverable else "❌ Not deliverable"
+                parts.append(f"🚚 Deliverability: {status}")
         if changed and change_type not in (None, "INITIAL_FETCH"):
             parts.append(f"🏦 Bank offers changed ({change_type})")
+        parts.append(f"🔗 Link: {url}")
         notification_text = "\n".join(parts)
 
         # Resolve chat_id via /users/{user_id} endpoint
@@ -191,19 +215,18 @@ def _resolve_telegram_user_id(user_id: int):
 
 
 if __name__ == "__main__":
-    logger.info(
-        "Scheduler starting – check interval: %d minute(s)", CHECK_INTERVAL_MINUTES
-    )
-    scheduler = BlockingScheduler()
-    scheduler.add_job(
-        check_products,
-        "interval",
-        minutes=CHECK_INTERVAL_MINUTES,
-        id="check_products",
-        max_instances=1,
-        coalesce=True,
-    )
-    # Run immediately on startup
+    if CHECK_INTERVAL_SECONDS <= 0:
+        logger.info("Scheduler starting in continuous mode (no interval delay)")
+    else:
+        logger.info(
+            "Scheduler starting – check interval: %d second(s)",
+            CHECK_INTERVAL_SECONDS,
+        )
+
     logger.info("Running initial product check...")
     check_products()
-    scheduler.start()
+
+    while True:
+        if CHECK_INTERVAL_SECONDS > 0:
+            time.sleep(CHECK_INTERVAL_SECONDS)
+        check_products()

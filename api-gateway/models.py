@@ -23,8 +23,12 @@ class Product(Base):
     product_url = Column(Text, nullable=False)
     platform = Column(String, nullable=False)
     product_name = Column(String, nullable=True)
+    preferred_pincode = Column(String(10), nullable=True)
     last_price = Column(Integer, nullable=True)
     last_availability = Column(Boolean, nullable=True)
+    last_deliverable = Column(Boolean, nullable=True)
+    last_available_at = Column(DateTime, nullable=True)
+    last_available_price = Column(Integer, nullable=True)
     last_offer_hash = Column(String, nullable=True)
     last_checked_at = Column(DateTime, nullable=True)
 
