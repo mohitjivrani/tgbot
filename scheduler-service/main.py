@@ -160,7 +160,7 @@ def check_products():
 
         # Resolve chat_id via /users/{user_id} endpoint
         # (Telegram user IDs == chat IDs for private chats)
-        telegram_user_id = _resolve_telegram_user_id(products, user_id)
+        telegram_user_id = _resolve_telegram_user_id(user_id)
         if telegram_user_id is None:
             logger.warning("Could not resolve telegram_user_id for user_id=%s", user_id)
             continue
@@ -175,7 +175,7 @@ def check_products():
             logger.error("Failed to notify user %s: %s", telegram_user_id, exc)
 
 
-def _resolve_telegram_user_id(products: list, user_id: int):
+def _resolve_telegram_user_id(user_id: int):
     """
     Resolve telegram_user_id from the cached products list.
     We store the telegram_user_id by querying /users endpoint.

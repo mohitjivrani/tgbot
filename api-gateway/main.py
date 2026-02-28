@@ -44,7 +44,7 @@ def detect_platform(url: str) -> Optional[str]:
         from urllib.parse import urlparse
         parsed = urlparse(url)
         host = parsed.netloc.lower()
-        # Strip port if present
+        # Strip port if present (e.g., "flipkart.com:443" → "flipkart.com")
         host = host.split(":")[0]
         if host == "flipkart.com" or host.endswith(".flipkart.com") or host == "fkrt.it":
             return "flipkart"
