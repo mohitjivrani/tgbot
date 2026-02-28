@@ -104,6 +104,7 @@ class FlipkartScraper(BaseScraper):
     def _extract_bank_offers(self, soup: BeautifulSoup):
         offers = []
         # Look for offer sections by common class names
+        # Scan at most 10 sections to avoid processing an unbounded number of DOM elements
         offer_sections = soup.select(".XBEQ60, ._3xFhiH, .A6+aMw, [class*='offer']")
         for section in offer_sections[:10]:
             text = section.get_text(separator=" ", strip=True)

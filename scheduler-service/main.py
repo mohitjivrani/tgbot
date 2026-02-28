@@ -1,3 +1,5 @@
+import hashlib
+import json
 import logging
 import os
 import time
@@ -111,7 +113,6 @@ def check_products():
         # Build bank_offers for update (add offer_hash field)
         offers_for_update = []
         for offer in normalized_offers:
-            import hashlib, json
             offer_hash = hashlib.sha256(
                 json.dumps(offer, sort_keys=True).encode()
             ).hexdigest()
@@ -157,23 +158,8 @@ def check_products():
             parts.append(f"🏦 Bank offers changed ({change_type})")
         notification_text = "\n".join(parts)
 
-        # Resolve chat_id from user_id (telegram_user_id stored in User)
-        try:
-            user_resp = http_get_with_retry(f"{API_GATEWAY_URL}/products?user_id=__internal__")
-            # We need the telegram_user_id – fetch via a workaround: get user details
-            # Since we have user_id (DB id), we query products with that user's products
-            # The scheduler stores telegram_user_id indirectly; use the product list response
-            # which contains user_id (DB integer). We'll fetch all products and find chat_id
-            # via telegram_user_id stored on the User object.
-            # For now we use the user's telegram_user_id that was stored when tracking.
-            # Re-fetch the specific product to get telegram_user_id via users endpoint.
-            pass
-        except Exception:
-            pass
-
-        # Notify: use telegram_user_id as chat_id (Telegram user IDs == chat IDs for private chats)
-        # We must look up telegram_user_id for this product's user_id.
-        # We'll iterate all products to find this user's telegram_user_id.
+        # Resolve chat_id via /users/{user_id} endpoint
+        # (Telegram user IDs == chat IDs for private chats)
         telegram_user_id = _resolve_telegram_user_id(products, user_id)
         if telegram_user_id is None:
             logger.warning("Could not resolve telegram_user_id for user_id=%s", user_id)

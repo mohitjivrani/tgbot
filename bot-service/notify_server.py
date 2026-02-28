@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from aiohttp import web
 
@@ -38,6 +39,5 @@ async def start_notify_server(bot):
     logger.info("Notify server listening on port 8080")
 
     # Keep running indefinitely
-    import asyncio
     while True:
         await asyncio.sleep(3600)

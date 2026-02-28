@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -21,9 +21,9 @@ app = FastAPI(title="Offer Engine", version="1.0.0")
 class OfferItem(BaseModel):
     bank_name: str
     card_type: Optional[str] = None
-    discount_value: Optional[object] = None
-    min_transaction: Optional[object] = None
-    min_transaction_amount: Optional[object] = None
+    discount_value: Optional[Union[int, str]] = None
+    min_transaction: Optional[Union[int, str]] = None
+    min_transaction_amount: Optional[Union[int, str]] = None
 
 
 class AnalyzeRequest(BaseModel):

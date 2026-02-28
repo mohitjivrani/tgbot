@@ -1,5 +1,6 @@
 import os
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional, List
 
@@ -26,14 +27,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="API Gateway", version="1.0.0")
 
-
-@app.on_event("startup")
-def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     logger.info("Creating database tables if they do not exist...")
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables ready.")
+    yield
+
+
+app = FastAPI(title="API Gateway", version="1.0.0", lifespan=lifespan)
 
 
 def detect_platform(url: str) -> Optional[str]:

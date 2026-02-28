@@ -28,7 +28,9 @@ class BaseScraper(ABC):
         """Scrape the given URL and return structured product data."""
 
     def _get_with_retry(self, url: str, max_retries: int = 3) -> requests.Response:
-        last_exc = None
+        if max_retries < 1:
+            max_retries = 1
+        last_exc: Exception = RuntimeError(f"No attempts made for {url}")
         for attempt in range(max_retries):
             try:
                 response = self.session.get(url, timeout=self.timeout, allow_redirects=True)
