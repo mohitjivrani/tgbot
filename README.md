@@ -48,6 +48,9 @@ cp .env.example .env
 # 3. Set your Telegram bot token (get one from @BotFather)
 #    Edit .env and replace the placeholder value:
 #    TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+#
+# 4. Set your Datadog API key
+#    DD_API_KEY=...
 ```
 
 ---
@@ -119,6 +122,27 @@ Remove a product from tracking.
 | `DATABASE_URL` | `postgresql://user:password@postgres:5432/tracker` | PostgreSQL connection string |
 | `SCRAPER_TIMEOUT` | `30` | HTTP timeout for scraper requests (seconds) |
 | `CHECK_INTERVAL_MINUTES` | `30` | How often the scheduler checks all products |
+| `DD_API_KEY` | — | **Required for Datadog.** API key used by the Datadog agent |
+| `DD_SITE` | `datadoghq.com` | Datadog site (`datadoghq.eu`, `us3.datadoghq.com`, etc.) |
+| `DD_ENV` | `dev` | Environment tag for traces/logs/security signals |
+
+---
+
+## Datadog (APM + Logs + Security)
+
+This stack includes a `datadog-agent` container with:
+
+- APM tracing (`ddtrace` + `ddtrace-run` in all Python services)
+- Container log collection (all service logs)
+- Runtime security + compliance flags enabled in the agent
+
+After starting the stack, check Datadog:
+
+- **APM** → Services (`api-gateway`, `bot-service`, `scraper-service`, `offer-engine`, `scheduler-service`)
+- **Logs** → Filter by `service:*`
+- **Security** → Runtime/Cloud Security signals from the Docker host
+
+> Feasibility note: runtime security/compliance features require Linux kernel support and elevated container capabilities (`SYS_ADMIN`, `AUDIT_READ`, etc.). If your local Docker runtime blocks those capabilities, APM and logs still work; security signals may be partial.
 
 ---
 

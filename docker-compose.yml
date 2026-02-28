@@ -1,4 +1,31 @@
 services:
+  datadog:
+    image: datadog/agent:7
+    container_name: datadog-agent
+    environment:
+      - DD_API_KEY=${DD_API_KEY}
+      - DD_SITE=${DD_SITE:-datadoghq.com}
+      - DD_ENV=${DD_ENV:-dev}
+      - DD_APM_ENABLED=true
+      - DD_LOGS_ENABLED=true
+      - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+      - DD_PROCESS_AGENT_ENABLED=true
+      - DD_RUNTIME_SECURITY_CONFIG_ENABLED=true
+      - DD_RUNTIME_SECURITY_CONFIG_ACTIVITY_DUMP_ENABLED=true
+      - DD_COMPLIANCE_CONFIG_ENABLED=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    cap_add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+      - SYS_RESOURCE
+      - AUDIT_CONTROL
+      - AUDIT_READ
+    pid: host
+
   postgres:
     image: postgres:15
     environment:
@@ -21,26 +48,77 @@ services:
       - DATABASE_URL=postgresql://user:password@postgres:5432/tracker
       - SCRAPER_SERVICE_URL=http://scraper-service:7501
       - OFFER_ENGINE_URL=http://offer-engine:7502
+      - DD_AGENT_HOST=datadog
+      - DD_TRACE_AGENT_PORT=8126
+      - DD_ENV=${DD_ENV:-dev}
+      - DD_SERVICE=api-gateway
+      - DD_VERSION=1.0.0
+      - DD_LOGS_INJECTION=true
+      - DD_TRACE_ENABLED=true
+      - DD_PROFILING_ENABLED=true
+      - DD_APPSEC_ENABLED=true
     depends_on:
       postgres:
         condition: service_healthy
+      datadog:
+        condition: service_started
+    labels:
+      com.datadoghq.ad.logs: '[{"source":"python","service":"api-gateway"}]'
 
   bot-service:
     build: ./bot-service
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - API_GATEWAY_URL=http://api-gateway:7500
+      - DD_AGENT_HOST=datadog
+      - DD_TRACE_AGENT_PORT=8126
+      - DD_ENV=${DD_ENV:-dev}
+      - DD_SERVICE=bot-service
+      - DD_VERSION=1.0.0
+      - DD_LOGS_INJECTION=true
+      - DD_TRACE_ENABLED=true
+      - DD_PROFILING_ENABLED=true
     depends_on:
       - api-gateway
+      - datadog
+    labels:
+      com.datadoghq.ad.logs: '[{"source":"python","service":"bot-service"}]'
 
   scraper-service:
     build: ./scraper-service
     restart: unless-stopped
     environment:
       - SCRAPER_TIMEOUT=30
+      - DD_AGENT_HOST=datadog
+      - DD_TRACE_AGENT_PORT=8126
+      - DD_ENV=${DD_ENV:-dev}
+      - DD_SERVICE=scraper-service
+      - DD_VERSION=1.0.0
+      - DD_LOGS_INJECTION=true
+      - DD_TRACE_ENABLED=true
+      - DD_PROFILING_ENABLED=true
+      - DD_APPSEC_ENABLED=true
+    depends_on:
+      - datadog
+    labels:
+      com.datadoghq.ad.logs: '[{"source":"python","service":"scraper-service"}]'
 
   offer-engine:
     build: ./offer-engine
+    environment:
+      - DD_AGENT_HOST=datadog
+      - DD_TRACE_AGENT_PORT=8126
+      - DD_ENV=${DD_ENV:-dev}
+      - DD_SERVICE=offer-engine
+      - DD_VERSION=1.0.0
+      - DD_LOGS_INJECTION=true
+      - DD_TRACE_ENABLED=true
+      - DD_PROFILING_ENABLED=true
+      - DD_APPSEC_ENABLED=true
+    depends_on:
+      - datadog
+    labels:
+      com.datadoghq.ad.logs: '[{"source":"python","service":"offer-engine"}]'
 
   scheduler-service:
     build: ./scheduler-service
@@ -51,11 +129,22 @@ services:
       - SCRAPER_SERVICE_URL=http://scraper-service:7501
       - OFFER_ENGINE_URL=http://offer-engine:7502
       - BOT_NOTIFY_URL=http://bot-service:8080/notify
+      - DD_AGENT_HOST=datadog
+      - DD_TRACE_AGENT_PORT=8126
+      - DD_ENV=${DD_ENV:-dev}
+      - DD_SERVICE=scheduler-service
+      - DD_VERSION=1.0.0
+      - DD_LOGS_INJECTION=true
+      - DD_TRACE_ENABLED=true
+      - DD_PROFILING_ENABLED=true
     depends_on:
       - api-gateway
       - scraper-service
       - offer-engine
       - bot-service
+      - datadog
+    labels:
+      com.datadoghq.ad.logs: '[{"source":"python","service":"scheduler-service"}]'
 
 volumes:
   postgres_data:
