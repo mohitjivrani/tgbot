@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: tracker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "7500:7500"
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/tracker
+      - SCRAPER_SERVICE_URL=http://scraper-service:7501
+      - OFFER_ENGINE_URL=http://offer-engine:7502
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  bot-service:
+    build: ./bot-service
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - API_GATEWAY_URL=http://api-gateway:7500
+    depends_on:
+      - api-gateway
+
+  scraper-service:
+    build: ./scraper-service
+    environment:
+      - SCRAPER_TIMEOUT=30
+
+  offer-engine:
+    build: ./offer-engine
+
+  scheduler-service:
+    build: ./scheduler-service
+    environment:
+      - CHECK_INTERVAL_MINUTES=30
+      - API_GATEWAY_URL=http://api-gateway:7500
+      - SCRAPER_SERVICE_URL=http://scraper-service:7501
+      - OFFER_ENGINE_URL=http://offer-engine:7502
+      - BOT_NOTIFY_URL=http://bot-service:8080/notify
+    depends_on:
+      - api-gateway
+      - scraper-service
+      - offer-engine
+      - bot-service
+
+volumes:
+  postgres_data:
