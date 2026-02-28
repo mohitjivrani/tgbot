@@ -40,10 +40,18 @@ app = FastAPI(title="API Gateway", version="1.0.0", lifespan=lifespan)
 
 
 def detect_platform(url: str) -> Optional[str]:
-    if "flipkart.com" in url or "fkrt.it" in url:
-        return "flipkart"
-    if "shop.vivo.com" in url:
-        return "vivo"
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        host = parsed.netloc.lower()
+        # Strip port if present
+        host = host.split(":")[0]
+        if host == "flipkart.com" or host.endswith(".flipkart.com") or host == "fkrt.it":
+            return "flipkart"
+        if host == "shop.vivo.com" or host.endswith(".shop.vivo.com"):
+            return "vivo"
+    except Exception:
+        pass
     return None
 
 
